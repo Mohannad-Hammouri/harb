@@ -273,10 +273,10 @@ button { font: inherit; color: inherit; }
 /* ================= قواعد اللعبة (بتشتغل على الشاشة الكبيرة، والجوال بيستخدمها للتحقق) ================= */
 const PW = 1600, PH = 1000;
 const UT = {
-  s: { n: 'جندي', cost: 5, max: 8, r: 22, mv: 120, rg: 175, cd0: 0, cd: 0, att: 1, blot: { k: 'o', r: 52 }, desc: 'بيضرب كل دور • بقعة صغيرة' },
-  t: { n: 'دبابة', cost: 20, max: 2, r: 38, mv: 70, rg: 250, cd0: 2, cd: 3, att: 1, blot: { k: 'o', r: 92 }, desc: 'كل ٣ أدوار • بقعة كبيرة' },
-  p: { n: 'طيارة', cost: 30, max: 1, r: 34, mv: 0, auto: 85, rg: 0, cd0: 3, cd: 4, att: 1, blot: { k: 'l', r: 26, len: 380 }, desc: 'كل ٤ أدوار • خط بأي مكان • بتطير لحالها' },
-  a: { n: 'مدفعية', cost: 25, max: 2, r: 34, mv: 0, rg: 230, cd0: 1, cd: 2, att: 1, blot: { k: 'o2', r: 60 }, desc: 'كل دورين • بقعتين • ما بتتحرك' },
+  s: { n: 'جندي', cost: 5, max: 8, r: 22, mv: 120, rg: 175, cd0: 0, cd: 0, att: 1, blot: { k: 'o', r: 24 }, desc: 'بيضرب كل دور • نقطة صغيرة' },
+  t: { n: 'دبابة', cost: 20, max: 2, r: 38, mv: 70, rg: 250, cd0: 2, cd: 3, att: 1, blot: { k: 'o', r: 50 }, desc: 'كل ٣ أدوار • بقعة كبيرة' },
+  p: { n: 'طيارة', cost: 30, max: 1, r: 34, mv: 0, auto: 85, rg: 0, cd0: 3, cd: 4, att: 1, blot: { k: 'l', r: 16, len: 320 }, desc: 'كل ٤ أدوار • خط بأي مكان • بتطير لحالها' },
+  a: { n: 'مدفعية', cost: 25, max: 2, r: 34, mv: 0, rg: 230, cd0: 1, cd: 2, att: 1, blot: { k: 'o2', r: 36 }, desc: 'كل دورين • بقعتين • ما بتتحرك' },
   m: { n: 'مسعف', cost: 15, max: 1, r: 22, mv: 120, rg: 0, cd0: 3, cd: 3, att: 0, desc: 'كل ٣ أدوار بيرجّع جندي ميت جنبه' },
 };
 const UORDER = ['s', 't', 'p', 'a', 'm'];
@@ -289,7 +289,7 @@ const POW = {
 };
 const POWS = ['nuke', 'rain', 'flip', 'dome'];
 const EVN = { wind: 'ريح', night: 'ليل', wet: 'ورقة مبلولة' };
-const NUKE_R = 230, DOME_R = 170, RAIN_R = 34, LIGHT = 175, JIT = 26;
+const NUKE_R = 150, DOME_R = 160, RAIN_R = 22, LIGHT = 175, JIT = 14;
 const INKS = [
   { id: 'blue', n: 'أزرق', c: '#1d4fd8' },
   { id: 'red', n: 'أحمر', c: '#c62828' },
@@ -411,7 +411,7 @@ function autoPlace(mode, slot, army, R) {
 /* ---------- الحالة ---------- */
 function newState(code, seed) {
   return {
-    v: 1, code, phase: 'lobby', mode: '1v1', timer: 15, voice: 1,
+    v: 1, code, phase: 'lobby', mode: '1v1', timer: 30, voice: 1,
     players: [], units: [], blots: [], domes: [], crates: [], nukes: [],
     ev: null, nextEv: null, evGap: 0, folds: { v: 0, h: 0 },
     turnNo: 0, round: 0, cur: -1, order: [], win: null, uid: 1,
@@ -2667,7 +2667,7 @@ const HOST = (() => {
     else if (G.players.length < need) warn = `ناقص ${AR(need - G.players.length)} — استنّى حدا يدخل أو زيد بوت.`;
     const settings = h('div', { class: 'settings' },
       h('div', { class: 'note' }, h('div', { class: 'lbl' }, 'نوع اللعبة'), seg([['1v1', '١ ضد ١'], ['2v2', '٢ ضد ٢']], G.mode, (v) => { G.mode = v; if (v === '2v2') G.players.forEach((p, i) => { p.team = i % 2; }); })),
-      h('div', { class: 'note' }, h('div', { class: 'lbl' }, 'وقت كل دور'), seg([[10, '١٠ ث'], [15, '١٥ ث'], [25, '٢٥ ث']], G.timer, (v) => { G.timer = v; }),
+      h('div', { class: 'note' }, h('div', { class: 'lbl' }, 'وقت كل دور'), seg([[20, '٢٠ ث'], [30, '٣٠ ث'], [40, '٤٠ ث']], G.timer, (v) => { G.timer = v; }),
         h('div', { class: 'lbl', style: 'margin-top:10px' }, 'صوت المعلّق'), seg([[1, '🎙️ شغّال'], [0, 'بدون']], G.voice, (v) => { G.voice = v; AUD.st.voice = !!v; })),
       h('div', { class: 'note' },
         h('button', { class: 'btn sm', disabled: G.players.length >= need, onclick: addBot }, '➕ زيد بوت'),
@@ -3384,13 +3384,7 @@ const PHONE = (() => {
       const ut = UT[T.type];
       const f = S.mode === '2v2' ? T.f : 'v';
       const srcs = T.type === 'p' ? [{ k: 'l', x: T.pts[0][0], y: T.pts[0][1], x2: T.pts[1][0], y2: T.pts[1][1], r: ut.blot.r, sd: 5 }] : T.pts.map((q, i) => ({ k: 'o', x: q[0], y: q[1], r: ut.blot.r, sd: 9 + i }));
-      for (const s of srcs) {
-        ART.drawBlot(c, s, col, k, { alpha: 0.85 });
-        const m = fmap(f, s.x, s.y);
-        const g = { k: s.k, x: m[0], y: m[1], r: s.r * (wet ? 1.3 : 1) };
-        if (s.k === 'l') { const m2 = fmap(f, s.x2, s.y2); g.x2 = m2[0]; g.y2 = m2[1]; }
-        ART.ghost(c, g, col, k, spread);
-      }
+      for (const s of srcs) ART.drawBlot(c, s, col, k, { alpha: 0.85 });
     }
     if (T.pw && T.pw.k === 'nuke' && T.pw.x != null) ART.ghost(c, { k: 'o', x: T.pw.x, y: T.pw.y, r: NUKE_R }, '#b3261e', k, 0);
     if (T.pw && T.pw.k === 'dome' && T.pw.x != null) ART.dome(c, { x: T.pw.x, y: T.pw.y, r: DOME_R }, col, k, 0);
