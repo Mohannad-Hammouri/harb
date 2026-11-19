@@ -2099,7 +2099,7 @@ const HOST = (() => {
   let G = null, room = null, D = null, pv = null, ui = {};
   let deadline = 0, botAt = 0, animating = false, dirty = true, lastPub = 0, lastSec = -1, loopI = null;
   const kicked = new Set(), drafts = new Map(), online = new Map();
-  let anim = {}, needDraw = true, rafOn = false, t0 = performance.now(), animSeqN = 0;
+  let anim = {}, needDraw = true, rafOn = false, t0 = performance.now(), animSeqN = 0, lastAmb = 0;
   const BOTN = ['بوت ممحاة', 'بوت برّاية', 'بوت مسطرة', 'بوت دبّاسة'];
   const ARMY_S = 60, PLACE_S = 75;
 
@@ -2337,13 +2337,14 @@ const HOST = (() => {
   function redraw() { needDraw = true; if (!rafOn) { rafOn = true; requestAnimationFrame(frame); } }
   function frame() {
     if (!pv || !ui.wrap || !document.body.contains(ui.wrap)) { rafOn = false; return; }
-    const dyn = D && ((D.ev && (D.ev.k === 'wind' || D.ev.k === 'night')) || D.nukes.length || D.domes.length);
-    const t = (performance.now() - t0) / 1000;
-    if (needDraw || dyn) {
-      needDraw = false;
-      try { pv.draw(D, Object.assign({ host: true, t }, anim)); } catch (e) { console.error(e); }
+    // الحركة الخفيفة (ريح، نجوم، تحذير النووي) بترسم ٨ مرات بالثانية بس، عشان ما تثقّل على اللابتوب/التلفزيون
+    const amb = D && ((D.ev && (D.ev.k === 'wind' || D.ev.k === 'night')) || D.nukes.length);
+    const now = performance.now(), t = (now - t0) / 1000;
+    if (needDraw || animating || (amb && now - lastAmb > 125)) {
+      needDraw = false; lastAmb = now;
+      try { pv.draw(D, Object.assign({ host: true, t: amb && !animating ? t : t }, anim)); } catch (e) { console.error(e); }
     }
-    if (dyn || needDraw || animating) requestAnimationFrame(frame);
+    if (amb || needDraw || animating) requestAnimationFrame(frame);
     else rafOn = false;
   }
   function layout() {
@@ -2354,7 +2355,7 @@ const HOST = (() => {
     let w = Math.min(aw, ah * 1.6), hh = w / 1.6;
     w = Math.floor(w); hh = Math.floor(hh);
     ui.wrap.style.width = w + 'px'; ui.wrap.style.height = hh + 'px';
-    pv.size(w, hh, Math.min(2, window.devicePixelRatio || 1));
+    pv.size(w, hh, Math.max(1, Math.min(window.devicePixelRatio || 1, 1.5, 2200 / w)));
     ui.cssK = w / 1600;
     redraw();
   }
@@ -3108,7 +3109,7 @@ const PHONE = (() => {
     if (turnKey !== lastTurnKey && S.ph === 'turn') {
       lastTurnKey = turnKey; sentGo = false;
       T = myTurn() ? newTurnState(P) : null;
-      if (myTurn()) { buzz([80, 60, 80]); AUD.sfx.ding(); }
+      if (myTurn()) { buzz([80, 60, 80]); AUD.sfx.ding(); document.querySelectorAll('.modal').forEach((x) => x.remove()); }
     }
     if (!screen.startsWith('battle')) { screen = 'battle'; drawBattle(); }
     // بعد الأنيميشن: نوري شو صار
@@ -3171,7 +3172,14 @@ const PHONE = (() => {
       const s = slotAt(S.mode, q[0], q[1]);
       const owner = D.players.find((p) => p.slot === s);
       if (T.pick === 'nuke') {
-        if (!owner || owner.team === P.team) { toast('النووي لازم ينزل بأرض العدو'); return; }
+        if (!owner || owner.team === P.team) {
+          // ضغط بأرضه: نلغي اختيار النووي ونكمّل كأنه بيحط بقعة عادية
+          T.pick = null; T.pw = null;
+          toast('☢️ النووي لازم بأرض العدو، اضغطه كمان مرة');
+          syncDraft(); updateBattle();
+          down(e);
+          return;
+        }
         T.pw = { k: 'nuke', x: Math.round(q[0]), y: Math.round(q[1]) };
       } else {
         const c2 = clampRect(zoneOf(S.mode, P.slot), q[0], q[1], 0);
@@ -3334,6 +3342,7 @@ const PHONE = (() => {
     const P = myP(); if (!P) return;
     if (!(P.rage >= 100 && P.pc < 2)) { if (manual) toast(P.rage >= 100 ? 'عندك قدرتين، استعمل وحدة أول' : 'الدواة بتتعبى لما تشطب أو تنشطب'); return; }
     if (P.rageN === pickSent) return;
+    document.querySelectorAll('.modal').forEach((x) => x.remove());
     const m = h('div', { class: 'modal' }, h('div', { class: 'sheet' },
       h('h2', null, 'دواة الحبر انملت! اختار قدرة ⚡'),
       h('div', { class: 'pgrid' }, POWS.map((k) => h('button', { class: 'pchoice', onclick: () => { pickSent = P.rageN; room.set({ m: S.mid, pk: { n: P.rageN, k } }, true); AUD.sfx.ding(); m.remove(); toast('أخذت ' + POW[k].n + ' ⚡'); } },
@@ -3433,7 +3442,7 @@ const PHONE = (() => {
         const secs = Math.ceil(left() / 1000);
         if (S.ph === 'turn' && myTurn() && !sentGo && secs <= 5 && secs !== ui.lastSec) { ui.lastSec = secs; AUD.sfx.tick(secs <= 2); }
         if (ui.timer.textContent !== (S.ph === 'turn' ? AR(secs) : '')) updateBattle();
-        if (D.ev || D.nukes.length || D.domes.length) drawBattleCanvas();
+        if ((D.ev && (D.ev.k === 'wind' || D.ev.k === 'night')) || D.nukes.length) { ui.ambN = (ui.ambN || 0) + 1; if (ui.ambN % 3 === 0) drawBattleCanvas(); }
       }
     }
     if (screen.startsWith('place') && ui.timer && S) ui.timer.textContent = AR(Math.ceil(left() / 1000));
